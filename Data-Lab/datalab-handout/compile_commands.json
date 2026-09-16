@@ -1,0 +1,62 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-O",
+      "-Wall",
+      "-m32",
+      "-o",
+      "btest",
+      "bits.c"
+    ],
+    "directory": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout",
+    "file": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout/bits.c",
+    "output": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout/btest"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-O",
+      "-Wall",
+      "-m32",
+      "-o",
+      "btest",
+      "btest.c"
+    ],
+    "directory": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout",
+    "file": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout/btest.c",
+    "output": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout/btest"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-O",
+      "-Wall",
+      "-m32",
+      "-o",
+      "btest",
+      "decl.c"
+    ],
+    "directory": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout",
+    "file": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout/decl.c",
+    "output": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout/btest"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-O",
+      "-Wall",
+      "-m32",
+      "-o",
+      "btest",
+      "tests.c"
+    ],
+    "directory": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout",
+    "file": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout/tests.c",
+    "output": "/home/e_power/Project/CSAPP/Data-Lab/datalab-handout/btest"
+  }
+]
