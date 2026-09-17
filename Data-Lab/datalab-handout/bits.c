@@ -258,18 +258,18 @@ int isAsciiDigit(int x) {
   // 如果是一个负数，那符号位肯定是1，gcc，msvc，clang编译器均执行算数右移
   int res1 = mid1 >> 31;  // 如果这个数是0xFFFFFFFF, 就说明x小于0x39，如果是0,
                           // 那说明它大于等于0x39
+  int neg10 = ~10 + 1;
+  int mid2 = mid1 + neg10;
+  int res2 = mid2 >> 31;
   res1 += 1;
   // 我们让它+1，如果这个结果是0，说明小于0x39，如果是1，说明大于等于0x39，其对应的bool值正是我们想要的
   // 接下来考虑 0x39， -9 = ~9 + 1 , 我们想要让mid - 9 <=
   // 0,但0不是负数，不能通过符号位直接判断
   // 考虑以上计算均为整数，上式等价为 mid - 10 < 0
   // -10 = ~10 + 1
-  int neg10 = ~10 + 1;
-  int mid2 = mid1 + neg10;
-  int res2 =
-      mid2 >> 31;  // 如果这个是数字是0xFFFFFFFF 意味着小于0，是0，意味着大于0
-  res2 += 1;       // 我们让它 +1 意味着如果小于0，结果为0， 大于0 结果为 1
-  res2 = !res2;    // 反转它，获得我们想要的对应的bool值
+  // 如果这个是数字是0xFFFFFFFF 意味着小于0，是0，意味着大于0
+  res2 += 1;     // 我们让它 +1 意味着如果小于0，结果为0， 大于0 结果为 1
+  res2 = !res2;  // 反转它，获得我们想要的对应的bool值
   // 我们判断它是不是asciidigit， 实际上是在返回 res1 && res2
   // 考虑到 res1 和 res2只有可能是 0x00000000 和 0x00000001,
   // 其后31位运算没有任何意义，我们完全可以用&来代替&&
@@ -413,7 +413,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4
  */
 int logicalNeg(int x) {
-  int symb = (x | (~x + 1)) /* 取符号位 非0 即为 0xFFFFFFFF */ >> 31;
+  int symb = (x | ~x + 1) /* 取符号位 非0 即为 0xFFFFFFFF */ >> 31;
   return symb + 1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
@@ -428,7 +428,6 @@ int logicalNeg(int x) {
  *  Max ops: 90
  *  Rating: 4
  */
-#include <stdio.h>
 int howManyBits(int x) {
   int symb = x >> 31;
   int flag = x ^ symb;
@@ -440,15 +439,15 @@ int howManyBits(int x) {
   int res = 1;
   int in_16 = conditional(!!(flag >> 16), 16, 0);
   // printf("%d\n", res);
-  flag >>= in_16;
   int in_8 = conditional(!!(flag >> 8), 8, 0);
-  flag >>= in_8;
   int in_4 = conditional(!!(flag >> 4), 4, 0);
-  flag >>= in_4;
   int in_2 = conditional(!!(flag >> 2), 2, 0);
+  int in_1 = conditional(!!(flag >> 1), 1, 0);
+  flag >>= in_16;
+  flag >>= in_8;
+  flag >>= in_4;
   // printf("%8x\n", flag);
   flag >>= in_2;
-  int in_1 = conditional(!!(flag >> 1), 1, 0);
   // printf("%8x\n", flag);
   // printf("%d\n", res);
   flag >>= in_1;
@@ -471,12 +470,12 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  unsigned e = (uf >> 23) & 0xFF;
+  unsigned e = (uf >> 23) & 255;
   unsigned f = uf & 0x7FFFFF;
-  unsigned s = uf & 0x80000000;
+  unsigned s = uf & (1 << 31);
   if (e == 0)
     return s + (f << 1);
-  if (e == 0xFF) {
+  if (e == 255) {
     return uf;  //  合并分支—— NaN 返回本身,无穷大x2依旧还是无穷大
   }
   e++;
@@ -495,10 +494,10 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  unsigned e = (uf >> 23) & 0xFF;
-  unsigned M = (uf & 0x7FFFFF) + 0x800000;  // 23 24位
+  unsigned e = (uf >> 23) & 255;
+  unsigned M = (uf & 0x7FFFFF) + (1 << 23);  // 23 24位
   // M = 1.f (frac 前补上隐藏的整数位 1), 是 24 位定点数, 缩放因子 2^23
-  unsigned s = uf & 0x80000000;
+  unsigned s = uf & (1 << 31);
   unsigned res;
   // val_int = 1.frac * 2 ^ E
   // E = e - bias
@@ -509,14 +508,16 @@ int floatFloat2Int(unsigned uf) {
   // 既然M是1.几 于是M < 2 必然 在 e = 157的时候不会溢出, e = 158的时候必然溢出
   // 乐
   // e <= 157
-  if (e == 0 || isLessOrEqual(e, 126)) {
+  // 这里Apple Silicon被硬控了， 换成9950X3D那台机器编译之后就能过了
+  // On Windows x86:  4      4       0       floatFloat2Int
+  if (/* e == 0 ||  */ isLessOrEqual(e, 126)) {
     // denormalized (e==0), or normalized with |value| < 1 (E <= -1)
     return 0;
   }
   if (!isLessOrEqual(e, 157)) {
     // E = e - 127 >= 31: magnitude too large for int, regardless of sign
     // (the exact -2^31 case coincides with this sentinel value anyway)
-    return 0x80000000u;
+    return (1 << 31);
   }
   if (isLessOrEqual(e, 150)) {
     // E <= 23: fraction bits shift off to the right
@@ -527,7 +528,7 @@ int floatFloat2Int(unsigned uf) {
   }
 
   if (!!s) {
-    return negate(res);
+    return ~res + 1;
   } else {
     return res;
   }
@@ -546,8 +547,22 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-  return 2;
+  // val_int = 1.frac * 2 ^ E
+  // 保持 frac 为0
+  // E = e - bias = e - 127 其实 x给的就是 E
+  // bias = 127
+  if (isLessOrEqual(x, -128)) {
+    // 如果是非规格化的数字，比如2^-127
+    return 0;
+  } else if (!isLessOrEqual(x, 127)) {
+    // 254的时候 exp=254 -127 = 127  可以表示
+    // 255 直接变成NaN或者INF
+    // INF
+    return 255 << 23;
+  }
+  return (x + 127) << 23;
 }
+
 // int main() {
 //   printf("\n%d\n", floatFloat2Int(1065353216));
 // }
