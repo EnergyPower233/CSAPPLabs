@@ -437,20 +437,36 @@ int howManyBits(int x) {
   // Find highest 1
   // 二分查找
   int res = 1;
-  int in_16 = conditional(!!(flag >> 16), 16, 0);
-  // printf("%d\n", res);
-  int in_8 = conditional(!!(flag >> 8), 8, 0);
-  int in_4 = conditional(!!(flag >> 4), 4, 0);
-  int in_2 = conditional(!!(flag >> 2), 2, 0);
-  int in_1 = conditional(!!(flag >> 1), 1, 0);
+
+  int flag_16, flag_8, flag_4, flag_2, flag_1;
+  int mask_16, mask_8, mask_4, mask_2, mask_1;
+  int in_16, in_8, in_4, in_2, in_1;
+
+  flag_16 = !!(flag >> 16);
+  mask_16 = ~flag_16 + 1;
+  in_16 = (mask_16 & 16) | ((~mask_16) & 0);
   flag >>= in_16;
+
+  flag_8 = !!(flag >> 8);
+  mask_8 = ~flag_8 + 1;
+  in_8 = (mask_8 & 8) | ((~mask_8) & 0);
   flag >>= in_8;
+
+  flag_4 = !!(flag >> 4);
+  mask_4 = ~flag_4 + 1;
+  in_4 = (mask_4 & 4) | ((~mask_4) & 0);
   flag >>= in_4;
-  // printf("%8x\n", flag);
+
+  flag_2 = !!(flag >> 2);
+  mask_2 = ~flag_2 + 1;
+  in_2 = (mask_2 & 2) | ((~mask_2) & 0);
   flag >>= in_2;
-  // printf("%8x\n", flag);
-  // printf("%d\n", res);
+
+  flag_1 = !!(flag >> 1);
+  mask_1 = ~flag_1 + 1;
+  in_1 = (mask_1 & 1) | ((~mask_1) & 0);
   flag >>= in_1;
+
   res += in_16 + in_8 + in_4 + in_2 + in_1;
   // 此时res即为下标位置
   // 对于flag ,如果x为0,则 flag为0 需要用1位表示
@@ -494,6 +510,9 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
+  // 被坑害了。 这里的Any integer/unsigned operations是说整数的所有运算都可以用
+  // 我以为位运算呢 所以我们可以用比较符号 无敌了。
+
   unsigned e = (uf >> 23) & 255;
   unsigned M = (uf & 0x7FFFFF) + (1 << 23);  // 23 24位
   // M = 1.f (frac 前补上隐藏的整数位 1), 是 24 位定点数, 缩放因子 2^23
@@ -510,16 +529,16 @@ int floatFloat2Int(unsigned uf) {
   // e <= 157
   // 这里Apple Silicon被硬控了， 换成9950X3D那台机器编译之后就能过了
   // On Windows x86:  4      4       0       floatFloat2Int
-  if (/* e == 0 ||  */ isLessOrEqual(e, 126)) {
+  if (/* e == 0 || isLessOrEqual(e, 126) */ e <= 126) {
     // denormalized (e==0), or normalized with |value| < 1 (E <= -1)
     return 0;
   }
-  if (!isLessOrEqual(e, 157)) {
+  if (/* !isLessOrEqual(e, 157) */ e > 157) {
     // E = e - 127 >= 31: magnitude too large for int, regardless of sign
     // (the exact -2^31 case coincides with this sentinel value anyway)
     return (1 << 31);
   }
-  if (isLessOrEqual(e, 150)) {
+  if (/* isLessOrEqual(e, 150) */ e <= 150) {
     // E <= 23: fraction bits shift off to the right
     res = M >> (150 - e);
   } else {
@@ -551,10 +570,10 @@ unsigned floatPower2(int x) {
   // 保持 frac 为0
   // E = e - bias = e - 127 其实 x给的就是 E
   // bias = 127
-  if (isLessOrEqual(x, -128)) {
+  if (/* isLessOrEqual(x, -128) */ x <= -128) {
     // 如果是非规格化的数字，比如2^-127
     return 0;
-  } else if (!isLessOrEqual(x, 127)) {
+  } else if (/* !isLessOrEqual(x, 127) */ x > 127) {
     // 254的时候 exp=254 -127 = 127  可以表示
     // 255 直接变成NaN或者INF
     // INF
